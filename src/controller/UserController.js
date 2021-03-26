@@ -7,14 +7,25 @@ class UserController {
     this.formEl = document.getElementById(idForm);
     this.formUpdateEl = document.getElementById(idFormUpadate);
     this.tableEl = document.getElementById(idTable);
+    this._photo = document.getElementById('exampleInputFile');
     this.idTable = idTable;
 
     this.onSubmit();
     this.onEdit();
+    this.onChangePhoto();
+  }
+
+  
+    onChangePhoto () {
+    this._photo.addEventListener('change', event => {
+      const file = event.target.files[0];
+      const objectURL = window.URL.createObjectURL(file);
+      const viewTumbnailPhoto = new UserView();
+      viewTumbnailPhoto.updateTumbnail('.thumbnail-image', objectURL);
+    })
   }
 
   getValues(formCurrent) {    
-
     let user = {}
      const fieldsRequired = ['name', 'email', 'password']
      let sendForm = true;
@@ -55,35 +66,49 @@ class UserController {
   }
 
 onEdit(){
+
   document.querySelector('#box-user-update .btn-cancel').addEventListener('click', ()=> this.showPanelCreate());
 
   this.formUpdateEl.addEventListener('submit', async event=> {
-     event.preventDefault();
-        let btn = this.formEl.querySelector('[type=submit]');
-        btn.disabled = true;
-        let values =this.getValues(this.formUpdateEl);
-        const index = this.formUpdateEl.dataset.trIndex;
-        const tr = this.tableEl.rows[parseInt(index) + 1];
-        const userOld = JSON.parse(tr.dataset.user);
-        const result = Object.assign({}, userOld, values);
-        tr.dataset.user = JSON.stringify(values);
+      event.preventDefault();
+      let btn = this.formEl.querySelector('[type=submit]');
+      btn.disabled = true;
+      let values =this.getValues(this.formUpdateEl);
+      let index = parseInt(this.formUpdateEl.dataset.trIndex);
 
+      if(index === -1) index = index  + 1;        
 
-        if(!values._photo) {
-          result._photo = userOld._photo;
+      const tr = this.tableEl.rows[index];
+      const userOld = JSON.parse(tr.dataset.user);
+      const result = Object.assign({}, userOld, values);
+      if(!values._photo) result._photo = userOld._photo;
+      tr.dataset.user = JSON.stringify(result);
+
+      try {         
+        const new_photo = await this._setPhoto(this.formUpdateEl);
+        if(new_photo !== 'dist/img/avatar5.png') {
+          result._photo  = new_photo;
         }else {
-          result._photo = await this._setPhoto(this.formUpdateEl);
+          throw Error('error');
         }
-    
-          const data = {
-            photo: result._photo, 
-            name: result._name,
-            email: result._email,
-            admin: result._admin ,
-            register:dateHelpers.dateFormat(result._register) 
-          }
-          tr.innerHTML = UserView.uptadeTr(data);
-          this.upadateCount();                
+      } catch (error) {
+        result._photo = userOld._photo;
+      }
+   
+
+      const data = {
+        photo: result._photo, 
+        name: result._name,
+        email: result._email,
+        admin: result._admin ,
+        register:dateHelpers.dateFormat(result._register) 
+      }
+
+      const view = new UserView()
+      tr.innerHTML = view.uptadeTr(data);
+      view.addEventsTr(tr);
+      this.upadateCount();  
+      this.showPanelCreate()    
   })
 }
 
@@ -116,13 +141,12 @@ getPhoto(formCurrent){
       fileReader.onerror = (erro) => reject(erro)
       fileReader.readAsDataURL(file)
   })
-  
-
 }
   addLine(dataUser, idTable){
     const view = new UserView(dataUser, idTable);
+    view.mountTable();
     this.upadateCount();
-  }
+ }
 
   upadateCount() {
     let numberUsers = 0;

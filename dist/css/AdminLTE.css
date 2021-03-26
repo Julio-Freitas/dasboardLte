@@ -4974,4 +4974,11 @@ table.text-center th {
   .table-responsive > .table tr td {
     white-space: normal !important;
   }
+
+}
+
+.thumbnail-image{
+  width: 128px;
+  height: 128px;
+  margin: 3px 0;
 }
